@@ -1,0 +1,9 @@
+# Test
+pytest==8.3.4
+
+# Veri analizi & deney sonuçları (Week 5-8'de lazım olacak)
+numpy==1.26.4
+matplotlib==3.9.2
+
+# Conflict graph görselleştirme (Week 5)
+networkx==3.3
