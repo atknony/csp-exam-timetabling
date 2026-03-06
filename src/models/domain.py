@@ -3,7 +3,7 @@ A module for defining domain dataclasses to solve afterwards.
 """
 
 from __future__ import annotations
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 
 
 @dataclass

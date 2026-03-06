@@ -5,6 +5,7 @@ Hard constraint checkers for the Exam Timetabling CSP.
 
 from typing import Dict, Set
 from src.models.solution import Solution
+from src.models.domain import ProblemInstance
 
 # Type alias
 ConflictGraph = Dict[int, Set[int]]
