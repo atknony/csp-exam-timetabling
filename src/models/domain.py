@@ -70,26 +70,64 @@ class Instructor:
 @dataclass
 class ProblemInstance:
 
-    exams: list[Exam]               # list of exams
-    timeslots: list[TimeSlot]       # list of timeslots
-    rooms: list[Room]               # list of rooms
-    instructors: list[Instructor]   # list of instructors
+    exams: list[Exam]
+    timeslots: list[TimeSlot]
+    rooms: list[Room]
+    instructors: list[Instructor]
 
-    # Edge case detection
+    # O(1) lookup indexes — built once, used everywhere 
+    _exam_index: dict[int, Exam] = field(default_factory=dict, init=False, repr=False)
+    _room_index: dict[int, Room] = field(default_factory=dict, init=False, repr=False)
+    _timeslot_index: dict[int, TimeSlot] = field(default_factory=dict, init=False, repr=False)
+    _instructor_index: dict[int, Instructor] = field(default_factory=dict, init=False, repr=False)
+
     def __post_init__(self):
-        # Add instructor ids on a set to check an ID match
-        instructor_ids = {ins.id for ins in self.instructors}
-        
-        if len(self.exams) <= 0 or len(self.timeslots) <= 0 or len(self.rooms) <= 0 or len(self.instructors) <= 0:
-            raise ValueError("Undefined problem. Please assign values of all fields.")
+        # Validation
+        if not (self.exams and self.timeslots and self.rooms and self.instructors):
+            raise ValueError("All fields must be non-empty.")
         if len(self.timeslots) * len(self.rooms) < len(self.exams):
-            raise ValueError("Insufficient amount of slots.")
-        
-        # Iterate trough exams and it's instructor ids to check is instructor registered
+            raise ValueError("Insufficient timeslot-room combinations for all exams.")
+
+        # Build indexes
+        self._exam_index = {e.id: e for e in self.exams}
+        self._room_index = {r.id: r for r in self.rooms}
+        self._timeslot_index = {t.id: t for t in self.timeslots}
+        self._instructor_index = {i.id: i for i in self.instructors}
+
+        # Cross-reference validation (now O(1) per lookup)
         for exam in self.exams:
-            if exam.lecturer_id not in instructor_ids:
-                raise ValueError(f"Exam {exam.id}: lecturer {exam.lecturer_id} not found in instructors")
-        
-    # Pretty formatting
+            if exam.lecturer_id not in self._instructor_index:
+                raise ValueError(
+                    f"Exam {exam.id}: lecturer {exam.lecturer_id} not registered."
+                )
+
+    # Accessor API — constraint checkers call these, never raw lists
+    def get_exam(self, exam_id: int) -> Exam:
+        try:
+            return self._exam_index[exam_id]
+        except KeyError:
+            raise KeyError(f"exam_id={exam_id} not found in ProblemInstance.")
+
+    def get_room(self, room_id: int) -> Room:
+        try:
+            return self._room_index[room_id]
+        except KeyError:
+            raise KeyError(f"room_id={room_id} not found in ProblemInstance.")
+
+    def get_timeslot(self, timeslot_id: int) -> TimeSlot:
+        try:
+            return self._timeslot_index[timeslot_id]
+        except KeyError:
+            raise KeyError(f"timeslot_id={timeslot_id} not found in ProblemInstance.")
+
+    def get_instructor(self, instructor_id: int) -> Instructor:
+        try:
+            return self._instructor_index[instructor_id]
+        except KeyError:
+            raise KeyError(f"instructor_id={instructor_id} not found in ProblemInstance.")
+
     def __repr__(self):
-        return f"ProblemInstance(exams={len(self.exams)}, timeslots={len(self.timeslots)}, rooms={len(self.rooms)}, instructors={len(self.instructors)})"
+        return (
+            f"ProblemInstance(exams={len(self.exams)}, timeslots={len(self.timeslots)}, "
+            f"rooms={len(self.rooms)}, instructors={len(self.instructors)})"
+        )

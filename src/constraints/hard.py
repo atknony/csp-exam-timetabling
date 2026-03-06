@@ -1,9 +1,6 @@
 """
 Hard constraint checkers for the Exam Timetabling CSP.
 
-Constraint reference:
-    H1 — No student may sit two exams in the same timeslot.
-         students(e_a) ∩ students(e_b) ≠ ∅  ⟹  X_{e_a} ≠ X_{e_b}
 """
 
 from typing import Dict, Set
@@ -12,7 +9,7 @@ from src.models.solution import Solution
 # Type alias
 ConflictGraph = Dict[int, Set[int]]
 
-
+# H1 - No Student Time Conflict
 def check_h1(
     exam_id: int,
     timeslot_id: int,
@@ -53,3 +50,18 @@ def check_h1(
         for neighbor_id in conflict_graph[exam_id]
     )
 
+# H2 - Room Capacity Constraint
+def check_h2(
+    exam_id: int,
+    room_id: int,
+    instance: ProblemInstance,
+) -> bool:
+    """
+    Return True iff assigning exam_id to room_id satisfies H2.
+
+    Raises:
+        KeyError: If exam_id or room_id is absent from the instance.
+    """
+    exam = instance.get_exam(exam_id)    # O(1)
+    room = instance.get_room(room_id)    # O(1)
+    return len(exam.student_ids) <= room.capacity
