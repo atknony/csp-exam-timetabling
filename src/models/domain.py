@@ -16,17 +16,15 @@ class Exam:
 
     # Edge case detection
     def __post_init__(self):
-        if self.required_invigilators <= 0:
-            raise ValueError("There must be at least an invigilator to proceed trough examination.")
-        if len(self.student_ids) <= 0:
-            raise ValueError("There must be at least a student to proceed trough examination.")
+        if self.id < 0:
+            raise ValueError(f"Exam id must be non-negative, got {self.id}.")
         if self.lecturer_id < 0:
-            raise ValueError("There can't be negative id.")
-        
-    # Pretty formatting
-    def __repr__(self):
-        return f"Exam(id={self.id}, students={len(self.student_ids)}, lecturer={self.lecturer_id}, invigilators={self.required_invigilators})"
-
+            raise ValueError(f"Lecturer id must be non-negative, got {self.lecturer_id}.")
+        if self.required_invigilators <= 0:
+            raise ValueError("At least one invigilator is required.")
+        if not self.student_ids:
+            raise ValueError("An exam must have at least one student.")
+            
 
 @dataclass
 class TimeSlot:
