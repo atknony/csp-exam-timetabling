@@ -66,3 +66,17 @@ def check_h2(
     exam = instance.get_exam(exam_id)    # O(1)
     room = instance.get_room(room_id)    # O(1)
     return len(exam.student_ids) <= room.capacity
+
+# H3 - No Room Clash
+def check_h3(
+    timeslot_id: int,
+    room_id: int,
+    solution: Solution,
+) -> bool:
+    """
+    Return True iff the (timeslot_id, room_id) pair is unoccupied.
+
+    H3: Y_{e_a} = Y_{e_b} ⟹ X_{e_a} ≠ X_{e_b}
+    Complexity: O(1) via solution's occupied-slot index.
+    """
+    return not solution.is_slot_occupied(timeslot_id, room_id)
