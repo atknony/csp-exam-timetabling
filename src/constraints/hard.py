@@ -93,7 +93,6 @@ def check_h2_partial(instance: ProblemInstance, solution: Solution, exam_id: int
     """
 
     if len(instance.exams[exam_id].student_ids) > instance.rooms[room_id].capacity:
-        print(f"H2 violated: exam {exam_id} won't fit in room {room_id} (students: {len(instance.exams[exam_id].student_ids)}, capacity: {instance.rooms[room_id].capacity})")
         return False
         
     return True
@@ -134,7 +133,6 @@ def check_h3_partial(instance: ProblemInstance, solution: Solution, exam_id: int
 
     for assigned_exam_id, assigned_slot in solution.exam_time.items():
         if assigned_slot == timeslot_id and solution.exam_room[assigned_exam_id] == room_id:
-            print(f"H3 violated: room {room_id} at timeslot {timeslot_id} is already occupied by exam {assigned_exam_id}")
             return False
         
     return True

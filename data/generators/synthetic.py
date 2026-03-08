@@ -27,7 +27,7 @@ def generate_instance(
     timeslots = [TimeSlot(id=i, day=i // periods_per_day, period=i % periods_per_day) for i in range(n_timeslots)]
 
     # Create rooms
-    rooms = [Room(id=i, capacity=random.randint(30, 150)) for i in range(n_rooms)]
+    rooms = [Room(id=i, capacity=random.randint(80, 200)) for i in range(n_rooms)]
 
     # Create instructors
     instructors = [Instructor(id=i, is_phd=random.random() < 0.35, 
@@ -40,7 +40,7 @@ def generate_instance(
     ## Assign 3-6 random exams to student
     for student_id in range(n_students):
         # Choose 3 to 6 random exams
-        exam_choices = random.sample(range(n_exams), k=min(random.randint(3, 6), n_exams))
+        exam_choices = random.sample(range(n_exams), k=min(random.randint(2, 3), n_exams))
         
         for exam_id in exam_choices:
             # Assign exam_id to student ids

@@ -3,7 +3,7 @@ Module for building conflict graph.
 """
 
 from __future__ import annotations
-from models.domain import Exam
+from src.models.domain import Exam
 
 
 def build_conflict_graph(exams: list[Exam]) -> dict[int, set[int]]:
