@@ -40,7 +40,7 @@ def generate_instance(
     ## Assign 3-6 random exams to student
     for student_id in range(n_students):
         # Choose 3 to 6 random exams
-        exam_choices = random.sample(range(n_exams), k=min(random.randint(2, 3), n_exams))
+        exam_choices = random.sample(range(n_exams), k=2)
         
         for exam_id in exam_choices:
             # Assign exam_id to student ids

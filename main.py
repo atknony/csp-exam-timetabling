@@ -10,7 +10,7 @@ from src.constraints.hard import check_h1, check_h2, check_h3
 
 if __name__ == '__main__':
     # 1. Generate instance
-    instance = generate_instance(n_exams=15, n_timeslots=6, n_rooms=5, n_instructors=8, n_students=300)
+    instance = generate_instance(n_exams=20, n_timeslots=10, n_rooms=4, n_instructors=8, n_students=60)
 
     # 2. Create conflict graph and print it
     conflict_graph = build_conflict_graph(exams=instance.exams)
