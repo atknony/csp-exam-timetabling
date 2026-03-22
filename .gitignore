@@ -1,13 +1,28 @@
-*.db
-
+# --- Python / Backend ---
 venv/
-.venv
-
+.venv/
 env/
-.env
-
 __pycache__/
-*.pyc
+*.py[cod]
+*$py.class
+.pytest_cache/
+.python-version
 
-.idea/
+# --- Node / Frontend ---
+node_modules/
+frontend/node_modules/
+frontend/dist/
+frontend/build/
+.vite/
+
+# --- Environment / Secrets ---
+.env
+.env.local
+.env.*.local
+
+# --- IDE / OS Files ---
 .vscode/
+.idea/
+.DS_Store
+Thumbs.db
+*.log
