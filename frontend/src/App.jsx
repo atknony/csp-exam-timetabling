@@ -28,6 +28,12 @@ import {
   WifiOff,
   FlaskConical,
   Database,
+  Settings,
+  SlidersHorizontal,
+  ToggleLeft,
+  ToggleRight,
+  RotateCcw,
+  Gauge,
 } from "lucide-react";
 
 import { exportScheduleToExcel } from "./utils/excelExport";
@@ -51,6 +57,55 @@ const CARTER_DATASETS = [
 const WEEKDAY_NAMES = [
   "Monday", "Tuesday", "Wednesday", "Thursday",
   "Friday", "Saturday", "Sunday",
+];
+
+const DEFAULT_SOLVER_CONFIG = {
+  w1: 1,
+  w2: 5,
+  w3: 2,
+  w4: 3,
+  enable_s3: true,
+  enable_s4: true,
+  time_limit: 120,
+};
+
+const CONSTRAINT_DEFS = [
+  {
+    key: "w1",
+    id: "S1",
+    label: "Instructor Preference",
+    desc: "Penalizes assigning instructors to timeslots they dislike",
+    min: 0, max: 10, step: 1,
+    color: "blue",
+  },
+  {
+    key: "w2",
+    id: "S2",
+    label: "Workload Fairness",
+    desc: "Minimizes gap between busiest and least-busy instructor",
+    min: 0, max: 10, step: 1,
+    color: "violet",
+  },
+  {
+    key: "w3",
+    id: "S3",
+    label: "Consecutive Invigilation",
+    desc: "Penalizes back-to-back invigilation in adjacent timeslots",
+    min: 0, max: 10, step: 1,
+    color: "amber",
+    toggleKey: "enable_s3",
+    toggleWarn: "Disabling improves performance on large instances (120+ exams)",
+  },
+  {
+    key: "w4",
+    id: "S4",
+    label: "Student Day Gap",
+    desc: "Penalizes students having exams on consecutive days",
+    min: 0, max: 10, step: 1,
+    color: "emerald",
+    toggleKey: "enable_s4",
+    toggleWarn: "Disabling improves performance on instances with 10K+ students",
+  },
 ];
 
 
@@ -568,6 +623,189 @@ function UnassignedPool({ examIds, exams }) {
 }
 
 
+/* ── Solver Configuration Panel ────────────────────────────── */
+
+function SolverConfigPanel({ config, onChange, onReset, disabled }) {
+  const [expanded, setExpanded] = useState(true);
+
+  const updateField = (key, value) => {
+    onChange({ ...config, [key]: value });
+  };
+
+  const isDirty = JSON.stringify(config) !== JSON.stringify(DEFAULT_SOLVER_CONFIG);
+
+  return (
+    <div className="rounded-xl border border-slate-200 bg-white shadow-sm overflow-hidden anim-fade-up anim-d1">
+      {/* ── Header (always visible) ── */}
+      <button
+        onClick={() => setExpanded(!expanded)}
+        className="w-full flex items-center justify-between px-5 py-3.5 hover:bg-slate-50/50 transition-colors"
+      >
+        <div className="flex items-center gap-2.5">
+          <div className="w-7 h-7 rounded-lg bg-slate-800 flex items-center justify-center">
+            <SlidersHorizontal size={14} className="text-white" />
+          </div>
+          <div className="text-left">
+            <h3 className="text-sm font-semibold text-slate-800 leading-none">Solver Configuration</h3>
+            <p className="text-[10px] text-slate-400 mt-0.5">Constraint weights, toggles, and time limit</p>
+          </div>
+          {isDirty && (
+            <span className="px-1.5 py-0.5 text-[9px] font-semibold uppercase tracking-wider bg-blue-100 text-blue-600 rounded-full">
+              Modified
+            </span>
+          )}
+        </div>
+        <ChevronDown
+          size={16}
+          className={`text-slate-400 transition-transform duration-200 ${expanded ? "rotate-180" : ""}`}
+        />
+      </button>
+
+      {/* ── Expanded content ── */}
+      {expanded && (
+        <div className="border-t border-slate-100 px-5 py-4 space-y-5">
+
+          {/* ── Weight sliders ── */}
+          <div className="space-y-4">
+            <p className="text-[10px] font-semibold text-slate-400 uppercase tracking-wider">Soft constraint weights</p>
+
+            {CONSTRAINT_DEFS.map((c) => {
+              const val = config[c.key];
+              const hasToggle = !!c.toggleKey;
+              const isEnabled = hasToggle ? config[c.toggleKey] : true;
+              const barColors = {
+                blue:    "bg-blue-500",
+                violet:  "bg-violet-500",
+                amber:   "bg-amber-500",
+                emerald: "bg-emerald-500",
+              };
+              const dotColors = {
+                blue:    "text-blue-500",
+                violet:  "text-violet-500",
+                amber:   "text-amber-500",
+                emerald: "text-emerald-500",
+              };
+
+              return (
+                <div key={c.key} className={`transition-opacity duration-200 ${!isEnabled && hasToggle ? "opacity-40" : ""}`}>
+                  <div className="flex items-center justify-between mb-1.5">
+                    <div className="flex items-center gap-2">
+                      <span className={`w-1.5 h-1.5 rounded-full ${barColors[c.color]}`} />
+                      <span className="text-xs font-semibold text-slate-700">{c.id}</span>
+                      <span className="text-xs text-slate-500">{c.label}</span>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <span className="text-xs font-mono font-bold text-slate-800 w-5 text-right tabular-nums">{val}</span>
+                      {hasToggle && (
+                        <button
+                          onClick={() => updateField(c.toggleKey, !isEnabled)}
+                          disabled={disabled}
+                          className="p-0.5 rounded transition-colors hover:bg-slate-100 disabled:opacity-50"
+                          title={isEnabled ? "Disable this constraint" : "Enable this constraint"}
+                        >
+                          {isEnabled
+                            ? <ToggleRight size={20} className={dotColors[c.color]} />
+                            : <ToggleLeft size={20} className="text-slate-300" />
+                          }
+                        </button>
+                      )}
+                    </div>
+                  </div>
+
+                  {/* Slider track */}
+                  <div className="relative flex items-center gap-3">
+                    <input
+                      type="range"
+                      min={c.min}
+                      max={c.max}
+                      step={c.step}
+                      value={val}
+                      disabled={disabled || (!isEnabled && hasToggle)}
+                      onChange={(e) => updateField(c.key, parseInt(e.target.value, 10))}
+                      className="flex-1 h-1.5 appearance-none bg-slate-200 rounded-full cursor-pointer disabled:cursor-not-allowed
+                        [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:w-3.5 [&::-webkit-slider-thumb]:h-3.5
+                        [&::-webkit-slider-thumb]:rounded-full [&::-webkit-slider-thumb]:bg-white [&::-webkit-slider-thumb]:border-2
+                        [&::-webkit-slider-thumb]:border-slate-300 [&::-webkit-slider-thumb]:shadow-sm [&::-webkit-slider-thumb]:hover:border-slate-400
+                        [&::-webkit-slider-thumb]:transition-all"
+                    />
+                    {/* Scale labels */}
+                    <div className="flex items-center gap-1 text-[9px] text-slate-300 font-mono shrink-0 w-12 justify-end">
+                      <span>{c.min}</span>
+                      <span>—</span>
+                      <span>{c.max}</span>
+                    </div>
+                  </div>
+
+                  <p className="text-[10px] text-slate-400 mt-1">{c.desc}</p>
+
+                  {hasToggle && !isEnabled && (
+                    <p className="text-[10px] text-amber-600 mt-1 flex items-center gap-1">
+                      <AlertTriangle size={10} />
+                      {c.toggleWarn}
+                    </p>
+                  )}
+                </div>
+              );
+            })}
+          </div>
+
+          {/* ── Divider ── */}
+          <div className="border-t border-slate-100" />
+
+          {/* ── Time limit ── */}
+          <div>
+            <p className="text-[10px] font-semibold text-slate-400 uppercase tracking-wider mb-3">Solver limits</p>
+            <div className="flex items-center gap-3">
+              <div className="flex items-center gap-2 flex-1">
+                <Gauge size={14} className="text-slate-400 shrink-0" />
+                <label className="text-xs font-medium text-slate-600 shrink-0">Time limit</label>
+                <div className="flex items-center gap-1.5 flex-1">
+                  <input
+                    type="range"
+                    min={30}
+                    max={600}
+                    step={30}
+                    value={config.time_limit}
+                    disabled={disabled}
+                    onChange={(e) => updateField("time_limit", parseInt(e.target.value, 10))}
+                    className="flex-1 h-1.5 appearance-none bg-slate-200 rounded-full cursor-pointer disabled:cursor-not-allowed
+                      [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:w-3.5 [&::-webkit-slider-thumb]:h-3.5
+                      [&::-webkit-slider-thumb]:rounded-full [&::-webkit-slider-thumb]:bg-white [&::-webkit-slider-thumb]:border-2
+                      [&::-webkit-slider-thumb]:border-slate-300 [&::-webkit-slider-thumb]:shadow-sm"
+                  />
+                </div>
+              </div>
+              <div className="flex items-center gap-1 px-2.5 py-1.5 rounded-lg bg-slate-100 border border-slate-200">
+                <span className="text-sm font-mono font-bold text-slate-800 tabular-nums">{config.time_limit}</span>
+                <span className="text-[10px] text-slate-400">sec</span>
+              </div>
+            </div>
+            <p className="text-[10px] text-slate-400 mt-1.5 ml-6">
+              Maximum wall-clock time for the CP-SAT solver. Longer limits allow more optimization but increase wait time.
+            </p>
+          </div>
+
+          {/* ── Footer actions ── */}
+          <div className="flex items-center justify-between pt-1">
+            <button
+              onClick={onReset}
+              disabled={!isDirty || disabled}
+              className="flex items-center gap-1.5 px-3 py-1.5 text-[11px] font-medium text-slate-500 hover:text-slate-700 hover:bg-slate-100 rounded-lg transition-all disabled:opacity-30 disabled:cursor-not-allowed"
+            >
+              <RotateCcw size={12} />
+              Reset to defaults
+            </button>
+            <div className="flex items-center gap-3 text-[10px] text-slate-400">
+              <span>F = {config.w1}·S1 + {config.w2}·S2{config.enable_s3 ? ` + ${config.w3}·S3` : ""}{config.enable_s4 ? ` + ${config.w4}·S4` : ""}</span>
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+
 function ConstraintBadge({ hardViolations, softPenalty }) {
   const isClean = hardViolations === 0;
   return (
@@ -598,6 +836,9 @@ export default function App() {
 
   // ── Selected dataset — persists across Import and Solve ──
   const [selectedDataset, setSelectedDataset] = useState("hec-s-92-2");
+
+  // ── Solver configuration — sent as `config` in the API payload ──
+  const [solverConfig, setSolverConfig] = useState({ ...DEFAULT_SOLVER_CONFIG });
 
   // ── Problem instance: null = nothing loaded yet ──
   const [problemData, setProblemData] = useState(null);
@@ -722,7 +963,10 @@ export default function App() {
       const response = await fetch(`${API_BASE_URL}/benchmark/solve`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ dataset: selectedDataset }),
+        body: JSON.stringify({
+          dataset: selectedDataset,
+          config: solverConfig,
+        }),
       });
 
       if (!response.ok) {
@@ -791,7 +1035,7 @@ export default function App() {
       stageRef.current = null;
       setSolverRunning(false);
     }
-  }, [dataLoaded, selectedDataset, problemData, dismissToast, showToast]);
+  }, [dataLoaded, selectedDataset, solverConfig, problemData, dismissToast, showToast]);
 
   // Cleanup on unmount
   useEffect(() => {
@@ -903,6 +1147,16 @@ export default function App() {
             <StatCard icon={Clock}    label="Timeslots"     value={dataLoaded ? `${numDays}d × ${periodsPerDay}p` : "—"} accent="amber" />
             <StatCard icon={Users}    label="Instructors"   value={dataLoaded ? problemData.instructors.length : "—"} accent="violet" />
           </div>
+
+          {/* ── SOLVER CONFIG PANEL — visible once data loaded ── */}
+          {dataLoaded && (
+            <SolverConfigPanel
+              config={solverConfig}
+              onChange={setSolverConfig}
+              onReset={() => setSolverConfig({ ...DEFAULT_SOLVER_CONFIG })}
+              disabled={solverRunning}
+            />
+          )}
 
           {/* ── SOLVER STATS ROW ── */}
           {hasSolution && (

@@ -88,7 +88,9 @@ class SolverConfig(BaseModel):
     w1: int = 1
     w2: int = 5
     w3: int = 2
+    w4: int = 3
     enable_s3: bool = True
+    enable_s4: bool = True
     time_limit: int = 120
 
 
@@ -304,6 +306,7 @@ def run_solver(
         f"{len(instance.rooms)} rooms, "
         f"{len(instance.instructors)} instructors | "
         f"S3={'ON' if config.enable_s3 else 'OFF'}, "
+        f"S4={'ON' if config.enable_s4 else 'OFF'}, "
         f"time_limit={config.time_limit}s"
     )
 
@@ -314,7 +317,9 @@ def run_solver(
             w1=config.w1,
             w2=config.w2,
             w3=config.w3,
+            w4=config.w4,
             enable_s3=config.enable_s3,
+            enable_s4=config.enable_s4,
             time_limit=config.time_limit,
         )
         wall_elapsed = time.perf_counter() - wall_start
@@ -355,7 +360,8 @@ def run_solver(
     s1 = solver_stats.get("s1_penalty", 0)
     s2 = solver_stats.get("s2_penalty", 0)
     s3 = solver_stats.get("s3_penalty", 0)
-    weighted_soft = config.w1 * s1 + config.w2 * s2 + config.w3 * s3
+    s4 = solver_stats.get("s4_penalty", 0)
+    weighted_soft = config.w1 * s1 + config.w2 * s2 + config.w3 * s3 + config.w4 * s4
 
     stats_for_frontend = {
         "hard_violations": 0,
@@ -366,12 +372,15 @@ def run_solver(
         "s1_penalty": s1,
         "s2_penalty": s2,
         "s3_penalty": s3,
+        "s4_penalty": s4,
         "max_load": solver_stats.get("max_load"),
         "min_load": solver_stats.get("min_load"),
         "w1": config.w1,
         "w2": config.w2,
         "w3": config.w3,
+        "w4": config.w4,
         "enable_s3": config.enable_s3,
+        "enable_s4": config.enable_s4,
         "time_limit": config.time_limit,
         "num_exams": n_exams,
         "num_rooms": len(instance.rooms),
@@ -634,8 +643,10 @@ def benchmark_solve(req: BenchmarkSolveRequest = BenchmarkSolveRequest()):
         w1=req.config.w1,
         w2=req.config.w2,
         w3=req.config.w3,
+        w4=req.config.w4,
         enable_s3=scaling["enable_s3"] if req.config.enable_s3 is True and scaling.get("enable_s3") is False else req.config.enable_s3,
-        time_limit=max(req.config.time_limit, scaling["time_limit"]),
+        enable_s4=req.config.enable_s4,
+        time_limit=req.config.time_limit,
     )
 
     return run_solver(instance, serialized, effective_config)
