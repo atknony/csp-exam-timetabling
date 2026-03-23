@@ -1,3 +1,12 @@
+---
+title: UETP Backend
+emoji: 🎓
+colorFrom: blue
+colorTo: indigo
+sdk: docker
+pinned: false
+---
+
 # University Exam Timetabling System (CSP/CSOP)
 
 A Constraint Satisfaction Optimization Problem (CSOP) based system that schedules university exams into timeslots and rooms without conflicts, while optimizing for instructor workload fairness, time preferences, and student scheduling comfort.
