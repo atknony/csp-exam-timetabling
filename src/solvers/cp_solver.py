@@ -106,10 +106,22 @@ def solve(
     # ==================== H2: Room Capacity ====================
     # |students(e)| ≤ capacity(Y_e)
     # Each exam's room variable is restricted to rooms with sufficient capacity.
+    
+    virtual_room_id = next((r.id for r in instance.rooms if r.capacity == 100000), -1)
 
     for exam in instance.exams:
         student_count = len(exam.student_ids)
-        allowed_rooms = [room.id for room in instance.rooms if room.capacity >= student_count]
+        
+        if exam.is_online:
+            allowed_rooms = [virtual_room_id]
+        else:
+            # Sadece fiziksel olan ve kapasitesi yeten odaları al
+            allowed_rooms = [r.id for r in instance.rooms if r.capacity >= student_count and r.id != virtual_room_id]
+            
+            # Eğer fiziksel hiçbir sınıf yetmiyorsa (Devasa Sınav), mecburen sanal odaya (multi-room) yönlendir
+            if not allowed_rooms:
+                allowed_rooms = [virtual_room_id]
+                
         model.add_allowed_assignments([exam_rooms[exam.id]], [(r,) for r in allowed_rooms])
 
     # ==================== H3: No Room Clash ====================
@@ -120,11 +132,14 @@ def solve(
     combined = []
 
     for exam in instance.exams:
-        if exam.is_online:
-            # Online exams aren't considered to test in all different
-            model.add(exam_rooms[exam.id] == 999)
+        # Eğer bir sınav H2 aşamasında sanal odaya gitmeye MECBUR kaldıysa
+        # (Ya online olduğu için ya da çok devasa olduğu için), onu H3 testinden muaf tut.
+        is_oversized = not any(r.capacity >= len(exam.student_ids) for r in instance.rooms if r.id != virtual_room_id)
+        
+        if exam.is_online or is_oversized:
+            model.add(exam_rooms[exam.id] == virtual_room_id)
         else:
-            # Only face to face exams are eligable to apply all different rule
+            # Sadece normal fiziksel sınavlar "AllDifferent" (Çakışmama) testine girer
             c_var = model.new_int_var(
                 0, len(instance.timeslots) * num_rooms - 1, f"combined_{exam.id}"
             )
@@ -138,7 +153,7 @@ def solve(
 
     for exam in instance.exams:
         model.add(
-            sum(invigilator[exam.id][inst.id] for inst in instance.instructors) >= exam.required_invigilators
+            sum(invigilator[exam.id][inst.id] for inst in instance.instructors) == exam.required_invigilators
         )
 
     # ==================== H4 & H5: Lecturer Conflict and Double Invigilation ====================
